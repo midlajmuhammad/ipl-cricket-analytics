@@ -1,118 +1,144 @@
-# IPL Cricket Analytics — Analysis Report
+# Statistical Validation Update
 
-## 1. H2 — Chase Success by Target Band
+## Step 4 Statistical Testing
 
-### Question
-How does chase success vary across first-innings target bands?
+Of the findings I tested, these survived and these did not.
 
-### Number
-The analysis compares chase win rate across different first-innings target bands.
-
-### Population
-Completed IPL matches with a valid first-innings score and a recorded match result.
-
-### Decision
-The target-band comparison can help identify whether chase success changes as the required target increases.
-
-### Doubt
-The number of matches in each target band is not equal, and other factors such as team strength, venue, and match conditions may also affect the result.
-
-**Chart:** `reports/figures/chase_win_rate_target_band.png`
+Statistical testing was used to determine whether the patterns observed during Step 3 had enough evidence to reject their corresponding null hypotheses. The results below should be read together with the Statistical Report.
 
 ---
 
-## 2. C1 — Run Scoring and Wicket Risk by Innings Phase
+## Findings Supported by Statistical Testing
 
-### Question
-How do scoring rate and wicket-taking rate change across the innings?
+### Chasing Advantage
 
-### Number
-The analysis compares runs per over and wickets per 100 legal balls across the Powerplay, Middle Overs, and Death phases.
+The analysis found that chasing teams won 54.51% of decisive matches.
 
-### Population
-Legal deliveries from the analyzed IPL matches grouped into the three innings phases.
+The binomial test produced a p-value of 0.0021, with a 95% confidence interval of 51.66% to 57.32%.
 
-### Decision
-The phase comparison can help describe how scoring and wicket-taking patterns change during an innings.
+**Status: Supported by statistical testing.**
 
-### Doubt
-The relationship between scoring and wickets does not establish that one directly causes the other. Team quality and match situation may also influence the results.
-
-**Chart:** `reports/figures/runs_wickets_by_phase.png`
+There is evidence that the chasing win rate differs from 50%.
 
 ---
 
-## 3. G3 — Toss Decision and Match Win Rate
+### Target and Chase Success
 
-### Question
-How often does the team making each toss decision go on to win the match?
+The analysis found that chase success decreased as the first-innings target increased.
 
-### Number
-The chart compares match win rate between the available toss decisions.
+The chi-square test produced a very small p-value, indicating strong evidence that chase outcome is associated with target band.
 
-### Population
-Completed matches with a recorded toss decision and match winner.
-
-### Decision
-The comparison provides a descriptive view of the relationship between toss decision and match outcome.
-
-### Doubt
-A difference in win rate does not prove that the toss decision itself caused the difference. Venue, teams, conditions, and match strategy may also contribute.
-
-**Chart:** `reports/figures/toss_split.png`
+**Status: Supported by statistical testing.**
 
 ---
 
-## 4. I1 — Venue Cleaning
+### Defended Totals
 
-### Question
-How does venue-name cleaning affect the venue match-count leaderboard?
+The analysis found that successfully defended matches had higher first-innings totals than successfully chased matches.
 
-### Number
-The analysis compares the number of matches associated with venue names before and after the cleaning process.
+The average totals were 183.3 runs for successfully defended matches and 155.5 runs for successfully chased matches. The mean difference was 27.8 runs and Cohen's d was 0.92.
 
-### Population
-Matches with recorded venue information in the raw and cleaned match datasets.
-
-### Decision
-Venue cleaning helps provide a more consistent basis for venue-level analysis and comparison.
-
-### Doubt
-The result depends on the cleaning and deduplication rules used. Different legitimate venue naming conventions may require different mappings.
-
-**Chart:** `reports/figures/venue_before_after.png`
+**Status: Supported by statistical testing.**
 
 ---
 
-## 5. Specialism — Data Analytics: Seasonal Scoring Pattern
+### Bowling Style and Economy
 
-### Question
-How does the average first-innings score change across IPL seasons?
+The analysis found that spin bowlers had a lower average economy rate than pace bowlers.
 
-### Number
-The analysis compares the average first-innings score for each season and displays the number of matches used for each season.
+Spin bowlers averaged 7.68 runs per over, while pace bowlers averaged 8.49 runs per over. Cohen's d was 1.18.
 
-### Population
-Completed matches with a valid first-innings score and recorded season information.
-
-### Decision
-The seasonal comparison provides a descriptive view of how first-innings scoring has varied across the dataset.
-
-### Doubt
-Changes between seasons may reflect differences in teams, venues, playing conditions, competition format, or other factors. The chart describes the pattern but does not establish a single cause.
-
-**Chart:** `reports/figures/specialism_season_scoring.png`
+**Status: Supported by statistical testing.**
 
 ---
 
-## Least-Confident Findings
+### Season and Average Score
 
-1. **Toss decision and match win rate** — The comparison does not establish causation.
-2. **Seasonal scoring pattern** — Differences between seasons may have multiple contributing factors.
-3. **Venue cleaning comparison** — Results depend on the cleaning and deduplication rules.
+The analysis found a positive relationship between season year and average innings score.
+
+The Pearson correlation was r = 0.862 with p = 0.0000021.
+
+**Status: Supported as an association.**
+
+However, this result does not establish that the passage of time itself caused scoring to increase. Changes in bat technology, rules, boundary sizes, venues, pitches, and team composition may also explain part of the relationship.
 
 ---
 
-## Conclusion
+## Findings Not Supported by Statistical Testing
 
-The analysis uses five decision-focused findings covering chase success, innings phases, toss decisions, venue cleaning, and seasonal scoring patterns. Each finding includes its population, key measurement, decision relevance, and an important limitation or doubt.
+### Toss Winner Advantage
+
+The analysis found that toss winners won 51.64% of decisive matches.
+
+However, the binomial test produced p = 0.2700 and the 95% confidence interval was 48.80% to 54.48%.
+
+**Status: Not supported by statistical testing.**
+
+There is not enough evidence to conclude that winning the toss changes the probability of winning the match.
+
+---
+
+### Powerplay versus Middle Overs
+
+The analysis found that Powerplay run rate was slightly higher than Middle-over run rate.
+
+The average Powerplay rate was 8.02 and the Middle-over rate was 7.95, giving a difference of only 0.08 runs per over.
+
+The paired t-test produced p = 0.1259.
+
+**Status: Not supported by statistical testing.**
+
+There is not enough evidence to conclude that the Powerplay run rate differs from the Middle-over run rate.
+
+---
+
+### Left-Handed versus Right-Handed Batters
+
+The analysis found almost identical average strike rates between left-handed and right-handed batters.
+
+Left-handed batters averaged 136.60 and right-handed batters averaged 136.62. The p-value was 0.9942 and Cohen's d was 0.001.
+
+**Status: Not supported by statistical testing.**
+
+There is not enough evidence to conclude that the two groups have different average strike rates.
+
+---
+
+### Sawai Mansingh Stadium
+
+The analysis found that Sawai Mansingh Stadium had a 65.15% chase win rate compared with the league-wide rate of 54.51%.
+
+The difference was 10.64 percentage points, but the binomial test produced p = 0.0849.
+
+**Status: Not supported by statistical testing at the 0.05 level.**
+
+There is not enough evidence to conclude that the venue's chase win rate differs from the league-wide rate.
+
+---
+
+## Findings Requiring Careful Interpretation
+
+A statistically significant result does not automatically mean that the effect is practically important. Effect sizes are therefore reported alongside p-values.
+
+Similarly, a non-significant result does not prove that there is no difference. It means that the available data did not provide enough evidence to conclude that a difference exists.
+
+The season correlation should also not be interpreted as proof of causation. Other changes across IPL seasons may contribute to the observed increase in average scoring.
+
+---
+
+## Final Status
+
+| Finding | Statistical status |
+|---|---|
+| Toss winner advantage | Not supported |
+| Toss decision and toss-winner outcome | Supported |
+| Chasing advantage | Supported |
+| Target band and chase success | Supported |
+| Defended totals | Supported |
+| Powerplay vs Middle overs | Not supported |
+| Left vs Right batting strike rate | Not supported |
+| Spin vs Pace economy | Supported |
+| Sawai Mansingh chase rate | Not supported |
+| Season vs average score | Supported as an association |
+
+The original Step 3 findings remain part of the analysis, but their statistical status has now been made explicit.
