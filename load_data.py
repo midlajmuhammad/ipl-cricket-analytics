@@ -1,34 +1,30 @@
-import pandas as pd
+from pathlib import Path
 import sqlite3
 
-# Database path
-db_path = r"C:\Users\dbila\IPL_cricket_analytics\data\raw\ipl.db"
+import pandas as pd
 
-# CSV files
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "data" / "raw" / "ipl.db"
+TABLES_DIR = BASE_DIR / "data" / "raw" / "tables"
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
 files = {
-    "matches": r"C:\Users\dbila\IPL_cricket_analytics\data\raw\tables\matches.csv",
-    "deliveries": r"C:\Users\dbila\IPL_cricket_analytics\data\raw\tables\deliveries.csv",
-    "players": r"C:\Users\dbila\IPL_cricket_analytics\data\raw\tables\players.csv",
-    "teams": r"C:\Users\dbila\IPL_cricket_analytics\data\raw\tables\teams.csv",
-    "venues": r"C:\Users\dbila\IPL_cricket_analytics\data\raw\tables\venues.csv"
+    "matches": TABLES_DIR / "matches.csv",
+    "deliveries": TABLES_DIR / "deliveries.csv",
+    "players": TABLES_DIR / "players.csv",
+    "teams": TABLES_DIR / "teams.csv",
+    "venues": TABLES_DIR / "venues.csv",
 }
 
-# Connect to SQLite database
-conn = sqlite3.connect(db_path)
+conn = sqlite3.connect(DB_PATH)
 
-# Load each CSV into SQLite
 for table_name, file_path in files.items():
+    if not file_path.exists():
+        raise FileNotFoundError(f"Missing CSV: {file_path}")
+
     df = pd.read_csv(file_path)
-
-    df.to_sql(
-        table_name,
-        conn,
-        if_exists="replace",
-        index=False
-    )
-
+    df.to_sql(table_name, conn, if_exists="replace", index=False)
     print(f"{table_name} table loaded: {len(df)} rows")
 
 conn.close()
-
-print("All IPL data loaded successfully!")
+print(f"All IPL data loaded successfully into {DB_PATH}!")

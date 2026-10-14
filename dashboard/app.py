@@ -78,10 +78,31 @@ DB_CANDIDATES = [
     Path.cwd() / "ipl.db", Path.cwd() / "data" / "raw" / "ipl.db",
 ]
 
+
+def build_sqlite_from_csvs(target_path: Path) -> bool:
+    table_dir = ROOT / "data" / "raw" / "tables"
+    if not table_dir.exists():
+        return False
+    csv_files = sorted(table_dir.glob("*.csv"))
+    if not csv_files:
+        return False
+
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(str(target_path)) as con:
+        for csv_path in csv_files:
+            try:
+                df = pd.read_csv(csv_path)
+                table_name = csv_path.stem.strip().lower()
+                df.to_sql(table_name, con, if_exists="replace", index=False)
+            except Exception:
+                continue
+    return target_path.exists() and target_path.stat().st_size > 0
+
+
 def find_source():
     seen = set()
     for path in DB_CANDIDATES:
-        if str(path.resolve()) in seen or not path.is_file() or path.stat().st_size == 0:
+        if str(path.resolve()) in seen or (path.exists() and path.stat().st_size == 0):
             continue
         seen.add(str(path.resolve()))
         try:
@@ -92,6 +113,19 @@ def find_source():
                     cols = [r[1].lower().strip() for r in con.execute(f'PRAGMA table_info("{quoted}")')]
                     if any(c in cols for c in ("bowler", "bowler_name")):
                         return path, table, cols
+        except sqlite3.Error:
+            pass
+
+    fallback_db = ROOT / "data" / "raw" / "ipl.db"
+    if build_sqlite_from_csvs(fallback_db):
+        try:
+            with sqlite3.connect(str(fallback_db)) as con:
+                objects = con.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view') ORDER BY name").fetchall()
+                for (table,) in objects:
+                    quoted = table.replace('"', '""')
+                    cols = [r[1].lower().strip() for r in con.execute(f'PRAGMA table_info("{quoted}")')]
+                    if any(c in cols for c in ("bowler", "bowler_name")):
+                        return fallback_db, table, cols
         except sqlite3.Error:
             pass
     return None, None, []
