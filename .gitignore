@@ -1,7 +1,5 @@
-data/raw/
-data/processed/
-*.db
-*.csv
+
+
 
 .venv/
 venv/
