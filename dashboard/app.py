@@ -68,76 +68,31 @@ st.markdown("""
 <div class="ticker"><div class="ticker-inner"><span>◉ WICKET RADAR</span><span>◉ ECONOMY TRACKER</span><span>◉ SEASON MOMENTUM</span><span>◉ BOWLER COMPARISON</span><span>◉ OVER SIMULATOR</span><span>◉ WICKET RADAR</span><span>◉ ECONOMY TRACKER</span><span>◉ SEASON MOMENTUM</span><span>◉ BOWLER COMPARISON</span><span>◉ OVER SIMULATOR</span></div></div>
 """, unsafe_allow_html=True)
 
-# ---------- Find a database and a usable source table ----------
+# ---------- Find a usable delivery CSV or SQLite table ----------
 ROOT = Path(__file__).resolve().parent.parent
 HERE = Path(__file__).resolve().parent
+
+CSV_CANDIDATES = [
+    ROOT / "data" / "raw" / "tables" / "deliveries.csv",
+    ROOT / "data" / "raw" / "deliveries.csv",
+    ROOT / "deliveries.csv",
+    HERE / "deliveries.csv",
+    HERE / "data" / "raw" / "tables" / "deliveries.csv",
+]
 DB_CANDIDATES = [
-    ROOT / "ipl.db", ROOT / "data" / "raw" / "ipl.db",
-    ROOT / "data" / "processed" / "ipl.db", ROOT / "notebooks" / "ipl.db",
-    HERE / "ipl.db", HERE / "data" / "raw" / "ipl.db",
-    Path.cwd() / "ipl.db", Path.cwd() / "data" / "raw" / "ipl.db",
+    ROOT / "ipl.db",
+    ROOT / "data" / "raw" / "ipl.db",
+    ROOT / "data" / "processed" / "ipl.db",
+    ROOT / "notebooks" / "ipl.db",
+    HERE / "ipl.db",
+    HERE / "data" / "raw" / "ipl.db",
+    Path.cwd() / "ipl.db",
+    Path.cwd() / "data" / "raw" / "ipl.db",
 ]
 
-
-def build_sqlite_from_csvs(target_path: Path) -> bool:
-    table_dir = ROOT / "data" / "raw" / "tables"
-    if not table_dir.exists():
-        return False
-    csv_files = sorted(table_dir.glob("*.csv"))
-    if not csv_files:
-        return False
-
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(str(target_path)) as con:
-        for csv_path in csv_files:
-            try:
-                df = pd.read_csv(csv_path)
-                table_name = csv_path.stem.strip().lower()
-                df.to_sql(table_name, con, if_exists="replace", index=False)
-            except Exception:
-                continue
-    return target_path.exists() and target_path.stat().st_size > 0
-
-
-def find_source():
-    seen = set()
-    for path in DB_CANDIDATES:
-        if str(path.resolve()) in seen or (path.exists() and path.stat().st_size == 0):
-            continue
-        seen.add(str(path.resolve()))
-        try:
-            with sqlite3.connect(str(path)) as con:
-                objects = con.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view') ORDER BY name").fetchall()
-                for (table,) in objects:
-                    quoted = table.replace('"', '""')
-                    cols = [r[1].lower().strip() for r in con.execute(f'PRAGMA table_info("{quoted}")')]
-                    if any(c in cols for c in ("bowler", "bowler_name")):
-                        return path, table, cols
-        except sqlite3.Error:
-            pass
-
-    fallback_db = ROOT / "data" / "raw" / "ipl.db"
-    if build_sqlite_from_csvs(fallback_db):
-        try:
-            with sqlite3.connect(str(fallback_db)) as con:
-                objects = con.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view') ORDER BY name").fetchall()
-                for (table,) in objects:
-                    quoted = table.replace('"', '""')
-                    cols = [r[1].lower().strip() for r in con.execute(f'PRAGMA table_info("{quoted}")')]
-                    if any(c in cols for c in ("bowler", "bowler_name")):
-                        return fallback_db, table, cols
-        except sqlite3.Error:
-            pass
-    return None, None, []
-
-DB_PATH, TABLE, TABLE_COLUMNS = find_source()
-if DB_PATH is None:
-    st.error("I couldn't find a SQLite table with a bowler column.")
-    st.info("Place ipl.db in the project root, or in data/raw/ipl.db.")
-    st.write("Checked database paths:")
-    for p in dict.fromkeys(DB_CANDIDATES):
-        st.code(str(p))
-    st.stop()
+@st.cache_data(show_spinner="Loading IPL delivery data...")
+def read_csv_source(csv_path):
+    return pd.read_csv(csv_path, low_memory=False)
 
 @st.cache_data(show_spinner="Loading IPL delivery data...")
 def read_table(db_path, table_name):
@@ -145,9 +100,52 @@ def read_table(db_path, table_name):
     with sqlite3.connect(db_path) as con:
         return pd.read_sql_query(f'SELECT * FROM "{safe}"', con)
 
-raw = read_table(str(DB_PATH), TABLE)
+# Prefer deliveries.csv. This avoids depending on a prebuilt database on Streamlit Cloud.
+CSV_PATH = next((p for p in CSV_CANDIDATES if p.is_file() and p.stat().st_size > 0), None)
+DB_PATH, TABLE, TABLE_COLUMNS = None, None, []
+
+if CSV_PATH is not None:
+    raw = read_csv_source(str(CSV_PATH))
+    DB_PATH = CSV_PATH
+    TABLE = "deliveries (CSV)"
+else:
+    for path in DB_CANDIDATES:
+        if not path.is_file() or path.stat().st_size == 0:
+            continue
+        try:
+            with sqlite3.connect(str(path)) as con:
+                objects = con.execute(
+                    "SELECT name FROM sqlite_master WHERE type IN ('table','view') ORDER BY name"
+                ).fetchall()
+                for (table_name,) in objects:
+                    safe = table_name.replace('"', '""')
+                    cols = [r[1].lower().strip() for r in con.execute(f'PRAGMA table_info("{safe}")')]
+                    if any(c in cols for c in ("bowler", "bowler_name")):
+                        DB_PATH, TABLE, TABLE_COLUMNS = path, table_name, cols
+                        break
+            if DB_PATH is not None:
+                break
+        except sqlite3.Error:
+            continue
+
+    if DB_PATH is not None:
+        raw = read_table(str(DB_PATH), TABLE)
+    else:
+        st.error("Couldn't find deliveries.csv or a SQLite table containing a bowler column.")
+        st.info(
+            "Commit data/raw/tables/deliveries.csv to your GitHub repository, "
+            "or place a usable ipl.db in the project root."
+        )
+        st.write("Checked CSV paths:")
+        for p in CSV_CANDIDATES:
+            st.code(str(p))
+        st.write("Checked database paths:")
+        for p in DB_CANDIDATES:
+            st.code(str(p))
+        st.stop()
+
 if raw.empty:
-    st.error(f"Table '{TABLE}' exists but contains no rows.")
+    st.error(f"The selected source '{TABLE}' contains no rows.")
     st.stop()
 
 # ---------- Column detection and normalization ----------
