@@ -533,7 +533,7 @@ with tab_visuals:
 
 with tab_sim:
     render_over_simulator(filtered)
-
+885
 with tab_data:
     st.subheader("🗃️ Data inspector")
     with st.expander("Database and table details", expanded=True):
